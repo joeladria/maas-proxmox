@@ -8,7 +8,6 @@ RUN apt-get update && apt-get install -y \
     unzip \
     qemu-system-x86 \
     qemu-utils \
-    ovmf \
     cloud-image-utils \
     make \
     ansible \

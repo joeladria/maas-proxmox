@@ -75,17 +75,23 @@
       apt:
         name:
           - proxmox-ve
-          - proxmox-secure-boot-support
           - postfix
           - open-iscsi
           - chrony
           - cloud-init
           - netplan.io
           - grub-cloud-amd64
-          - grub-efi-amd64
           - ifupdown2
           - bridge-utils
         state: present
+
+    - name: Install UEFI boot packages
+      apt:
+        name:
+          - proxmox-secure-boot-support
+          - grub-efi-amd64
+        state: present
+      when: boot_mode == 'uefi'
 
     # Remove os-prober (not needed for hypervisor)
     - name: Remove os-prober
