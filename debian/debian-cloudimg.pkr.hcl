@@ -17,6 +17,21 @@ locals {
     "https_proxy=${var.https_proxy}",
     "no_proxy=${var.https_proxy}",
   ]
+
+  qemu_base_args = [
+    ["-machine", "${lookup(local.qemu_machine, var.architecture, "")}"],
+    ["-cpu", "${lookup(local.qemu_cpu, var.architecture, "")}"],
+    ["-device", "virtio-gpu-pci"],
+    ["-drive", "file=output-cloudimg/packer-cloudimg,format=qcow2"],
+    ["-drive", "file=seeds-cloudimg.iso,format=raw"]
+  ]
+
+  qemu_uefi_args = var.boot_mode == "uefi" ? [
+    ["-drive", "if=pflash,format=raw,id=ovmf_code,readonly=on,file=OVMF_CODE.fd"],
+    ["-drive", "if=pflash,format=raw,id=ovmf_vars,file=OVMF_VARS.fd"],
+  ] : []
+
+  qemuargs = concat(local.qemu_base_args, local.qemu_uefi_args)
 }
 
 source "null" "dependencies" {
@@ -38,15 +53,7 @@ source "qemu" "cloudimg" {
   qemu_img_args {
     create = ["-F", "qcow2"]
   }
-  qemuargs = [
-    ["-machine", "${lookup(local.qemu_machine, var.architecture, "")}"],
-    ["-cpu", "${lookup(local.qemu_cpu, var.architecture, "")}"],
-    ["-device", "virtio-gpu-pci"],
-    ["-drive", "if=pflash,format=raw,id=ovmf_code,readonly=on,file=OVMF_CODE.fd"],
-    ["-drive", "if=pflash,format=raw,id=ovmf_vars,file=OVMF_VARS.fd"],
-    ["-drive", "file=output-cloudimg/packer-cloudimg,format=qcow2"],
-    ["-drive", "file=seeds-cloudimg.iso,format=raw"]
-  ]
+  qemuargs = local.qemuargs
   shutdown_command       = "sudo -S shutdown -P now"
   ssh_handshake_attempts = 50
   ssh_password           = var.ssh_password
@@ -94,7 +101,10 @@ build {
   # Install Proxmox VE using Ansible
   provisioner "ansible-local" {
     playbook_file = "${path.root}/ansible/proxmox.yml"
-    extra_arguments = ["--extra-vars", "ansible_python_interpreter=/usr/bin/python3"]
+    extra_arguments = [
+      "--extra-vars", "ansible_python_interpreter=/usr/bin/python3",
+      "--extra-vars", "boot_mode=${var.boot_mode}"
+    ]
   }
 
   provisioner "shell" {

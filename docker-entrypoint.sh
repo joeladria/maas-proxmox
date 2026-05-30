@@ -20,19 +20,7 @@ echo ""
 cd /build/debian
 
 echo "Cleaning previous builds..."
-rm -rf output-* debian-custom-*.gz debian-*-cloudimg.tar.gz proxmox-*.tar.gz seeds-cloudimg.iso OVMF_VARS.fd OVMF_CODE.fd SIZE_CODE.fd SIZE_VARS.fd
-
-echo "Preparing OVMF firmware files..."
-# Detect OVMF suffix
-if [ -f /usr/share/OVMF/OVMF_CODE.fd ]; then
-    OVMF_SFX=""
-else
-    OVMF_SFX="_4M"
-fi
-cp -v /usr/share/OVMF/OVMF_CODE${OVMF_SFX}.fd OVMF_CODE.fd
-cp -v /usr/share/OVMF/OVMF_VARS${OVMF_SFX}.fd OVMF_VARS.fd
-cp -v /usr/share/OVMF/OVMF_CODE${OVMF_SFX}.fd SIZE_CODE.fd
-cp -v /usr/share/OVMF/OVMF_VARS${OVMF_SFX}.fd SIZE_VARS.fd
+rm -rf output-* debian-custom-*.gz debian-*-cloudimg.tar.gz proxmox-*.tar.gz seeds-cloudimg.iso
 
 echo ""
 echo "Initializing Packer..."
@@ -52,8 +40,7 @@ PACKER_LOG=0 packer build \
     -var debian_series=trixie \
     -var debian_version=13 \
     -var architecture=amd64 \
-    -var ovmf_suffix=${OVMF_SFX} \
-    -var boot_mode=uefi \
+    -var boot_mode=bios \
     -var host_is_arm=false \
     -var timeout=1h \
     -var install_proxmox=true \

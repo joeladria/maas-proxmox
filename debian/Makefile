@@ -7,7 +7,7 @@ PACKER_LOG ?= 0
 export PACKER_LOG
 
 SERIES ?= trixie
-BOOT ?= uefi
+BOOT ?= bios
 ARCH ?= amd64
 TIMEOUT ?= 1h
 OVMF ?= OVMF
@@ -43,11 +43,24 @@ else
 	OVMF_SFX ?=
 endif
 
+# OVMF firmware files are only needed for UEFI builds
+ifeq ($(strip $(BOOT)),uefi)
+OVMF_DEPS = OVMF_CODE.fd OVMF_VARS.fd SIZE_CODE.fd SIZE_VARS.fd
+OVMF_VARS_ARG = -var ovmf_suffix=${OVMF_SFX}
+else
+OVMF_DEPS =
+OVMF_VARS_ARG =
+endif
+
 .PHONY: all clean
 
 all: debian
 
+ifeq ($(strip $(BOOT)),uefi)
 $(eval $(call check_packages_deps,cloud-image-utils ovmf,cloud-image-utils ovmf))
+else
+$(eval $(call check_packages_deps,cloud-image-utils,cloud-image-utils))
+endif
 
 lint:
 	packer validate .
@@ -74,22 +87,22 @@ ifeq ($(strip $(ARCH)),arm64)
 	truncate -s 64m OVMF_CODE.fd
 endif
 
-debian: check-deps clean OVMF_CODE.fd OVMF_VARS.fd SIZE_CODE.fd SIZE_VARS.fd
+debian: check-deps clean $(OVMF_DEPS)
 	${PACKER} init . && ${PACKER} build \
 		-var debian_series=${SERIES} \
 		-var debian_version=${VERSION} \
 		-var architecture=${ARCH} \
-		-var ovmf_suffix=${OVMF_SFX} \
+		$(OVMF_VARS_ARG) \
 		-var boot_mode=${BOOT} \
 		-var host_is_arm=${HOST_IS_ARM} \
 		-var timeout=${TIMEOUT} .
 
-proxmox: check-deps clean OVMF_CODE.fd OVMF_VARS.fd SIZE_CODE.fd SIZE_VARS.fd
+proxmox: check-deps clean $(OVMF_DEPS)
 	${PACKER} init . && ${PACKER} build \
 		-var debian_series=${SERIES} \
 		-var debian_version=${VERSION} \
 		-var architecture=${ARCH} \
-		-var ovmf_suffix=${OVMF_SFX} \
+		$(OVMF_VARS_ARG) \
 		-var boot_mode=${BOOT} \
 		-var host_is_arm=${HOST_IS_ARM} \
 		-var timeout=${TIMEOUT} \
