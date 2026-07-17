@@ -240,7 +240,9 @@ echo "root:your-password" | sudo chpasswd
 ```
 
 **Optional post-deployment tasks:**
-- Disable subscription nag: Edit `/etc/apt/sources.list.d/pve-enterprise.list`
+- The enterprise (subscription) apt repo is disabled during the build/deploy
+  (renamed to `*.disabled`), so `apt update` won't 401. Re-enable it only if you
+  have a subscription.
 - Update packages: `apt update && apt upgrade`
 - Configure additional storage or join Proxmox cluster
 

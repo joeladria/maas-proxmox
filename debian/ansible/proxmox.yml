@@ -93,6 +93,27 @@
         state: present
       when: boot_mode == 'uefi'
 
+    # Disable Proxmox enterprise repositories
+    # The proxmox-ve packages ship an enterprise apt source
+    # (enterprise.proxmox.com) that requires a paid subscription. Without
+    # credentials it returns 401 Unauthorized, which makes `apt-get update`
+    # fail — including curtin's apt-get update during MAAS deployment, which
+    # aborts the install. This deployment uses the no-subscription repo, so the
+    # enterprise sources are disabled here. Handles legacy .list and DEB822
+    # .sources formats.
+    - name: Find enterprise Proxmox apt sources
+      find:
+        paths: /etc/apt/sources.list.d
+        patterns: '*.list,*.sources'
+        contains: 'enterprise\.proxmox\.com'
+      register: pve_enterprise_repos
+
+    - name: Disable enterprise Proxmox apt repositories
+      command: "mv '{{ item.path }}' '{{ item.path }}.disabled'"
+      loop: "{{ pve_enterprise_repos.files }}"
+      loop_control:
+        label: "{{ item.path }}"
+
     # Remove os-prober (not needed for hypervisor)
     - name: Remove os-prober
       apt:

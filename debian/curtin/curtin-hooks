@@ -293,6 +293,41 @@ def configure_proxmox_network(config, target):
     print("Proxmox network configuration complete")
 
 
+def disable_enterprise_repos(target):
+    """Disable Proxmox enterprise apt repositories in the target.
+
+    The Proxmox image ships an enterprise repository (enterprise.proxmox.com)
+    that requires a paid subscription. Without valid credentials it returns
+    401 Unauthorized, which makes `apt-get update` exit non-zero. curtin runs
+    `apt-get update` in the target chroot during curthooks (via do_apt_config),
+    so a leftover enterprise repo aborts the whole install. MAAS deployments
+    use the no-subscription repo, so any enterprise sources are disabled here
+    to keep apt-get update working during deployment and on the running node.
+
+    Handles both legacy one-line (.list) and DEB822 (.sources) formats by
+    renaming the offending file so apt ignores it (apt only reads .list and
+    .sources extensions).
+    """
+    sources_dir = os.path.join(target, "etc/apt/sources.list.d")
+    if not os.path.isdir(sources_dir):
+        return
+
+    for name in sorted(os.listdir(sources_dir)):
+        if not name.endswith((".list", ".sources")):
+            continue
+        path = os.path.join(sources_dir, name)
+        try:
+            with open(path) as f:
+                content = f.read()
+        except OSError:
+            continue
+        if "enterprise.proxmox.com" not in content:
+            continue
+        disabled_path = path + ".disabled"
+        os.rename(path, disabled_path)
+        print(f"DEBUG: Disabled enterprise Proxmox repo {path} -> {disabled_path}")
+
+
 def cleanup():
     """Remove curtin-hooks so its as if we were never here."""
     curtin_dir = os.path.dirname(__file__)
@@ -329,13 +364,20 @@ def main():
     sources_list_path = os.path.join(target, "etc/apt/sources.list")
     if not os.path.exists(sources_list_path):
         print("DEBUG: Creating /etc/apt/sources.list from DEB822 format for curtin compatibility")
-        # Create a minimal sources.list that points to Debian and Proxmox repos
+        # Create a minimal sources.list that points to the Debian repos.
+        # The Proxmox pve-no-subscription repo is intentionally omitted here:
+        # it already ships in /etc/apt/sources.list.d/proxmox.list, and listing
+        # it again produces "configured multiple times" apt warnings.
         with open(sources_list_path, 'w') as f:
             f.write("# Auto-generated for curtin compatibility\n")
             f.write("deb http://deb.debian.org/debian trixie main contrib non-free non-free-firmware\n")
             f.write("deb http://deb.debian.org/debian trixie-updates main contrib non-free non-free-firmware\n")
             f.write("deb http://security.debian.org/debian-security trixie-security main contrib non-free non-free-firmware\n")
-            f.write("deb http://download.proxmox.com/debian/pve trixie pve-no-subscription\n")
+
+    # Disable the Proxmox enterprise repo before builtin_curthooks runs
+    # apt-get update in the chroot; the enterprise repo returns 401 without a
+    # subscription and would otherwise abort the install.
+    disable_enterprise_repos(target)
 
     # FIX issue #9: Prevent builtin_curthooks from overwriting sources.list
     # with Ubuntu repos (caused by Ubuntu cloud-init package detection)
