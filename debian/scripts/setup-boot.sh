@@ -41,9 +41,14 @@ if [ ${BOOT_MODE} == "uefi" ]; then
                 apt-get install -y grub-efi-${ARCH}-signed shim-signed grub-efi-${ARCH}
         fi
 else
-        if [ ${DEBIAN_VERSION} == '13' ]; then
-            echo "grub-pc grub-pc/install_devices multiselect /dev/sda" | /usr/bin/debconf-set-selections
-        fi
+        # Pre-seed empty install_devices so grub-install is skipped during the
+        # Packer build. The cloud image's GPT disk has no BIOS Boot Partition,
+        # so grub-install would fail here. MAAS/curtin installs GRUB to real
+        # hardware during deployment, where it creates the correct partitions.
+        # install_devices_empty=true is also required; without it grub-pc's
+        # postinst treats an empty list as an error in noninteractive mode.
+        echo "grub-pc grub-pc/install_devices multiselect" | /usr/bin/debconf-set-selections
+        echo "grub-pc grub-pc/install_devices_empty boolean true" | /usr/bin/debconf-set-selections
         apt-get install -y grub-cloud-${ARCH} grub-pc
 fi
 
