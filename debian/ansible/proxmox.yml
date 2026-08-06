@@ -109,6 +109,29 @@
         path: /etc/default/grub.d/10_cloud.cfg
         state: absent
 
+    # Enable local (tty1) and serial (ttyS0, ttyS1) consoles so a login
+    # prompt is reachable from KVM/IPMI video as well as either serial port
+    - name: Configure additional consoles in GRUB
+      copy:
+        dest: /etc/default/grub.d/99-serial-console.cfg
+        content: |
+          GRUB_CMDLINE_LINUX_DEFAULT="${GRUB_CMDLINE_LINUX_DEFAULT} console=tty1 console=ttyS0,115200 console=ttyS1,115200"
+        mode: '0644'
+
+    - name: Regenerate GRUB configuration
+      command: update-grub
+      changed_when: true
+
+    - name: Enable serial getty on ttyS0
+      systemd:
+        name: serial-getty@ttyS0.service
+        enabled: yes
+
+    - name: Enable serial getty on ttyS1
+      systemd:
+        name: serial-getty@ttyS1.service
+        enabled: yes
+
     # Remove standard Debian kernel (keep only Proxmox kernel)
     - name: Remove standard Debian kernel
       apt:
