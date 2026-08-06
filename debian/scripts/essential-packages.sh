@@ -31,4 +31,4 @@ fi
 ARCH=$(dpkg --print-architecture)
 
 apt-get update
-apt-get -y install lvm2 xfsprogs
+apt-get -y install lvm2 xfsprogs fake-hwclock lldpd
