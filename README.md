@@ -110,12 +110,15 @@ scp proxmox-ve-13-cloudimg.tar.gz ubuntu@<MAAS_IP>:/home/ubuntu/
 ssh ubuntu@<MAAS_IP>
 sudo maas admin boot-resources create \
   name='custom/proxmox-ve-9.1' \
+  title='Proxmox VE 9.1' \
   architecture='amd64/generic' \
   filetype='tgz' \
   content@=/home/ubuntu/proxmox-ve-13-cloudimg.tar.gz
 ```
 
 Replace `admin` with your MAAS profile name.
+
+**Note:** `title` is what MAAS actually displays in the image selection dropdown when deploying — `name` is only the internal identifier. Omitting `title` leaves the dropdown entry blank (you'll still see the `name` slug if you inspect the page's HTML, but no visible label). If you already imported an image without `title`, delete it in MAAS and re-run `boot-resources create` with `title` set — boot resources can't be edited in place.
 
 **Next**: See [Deployment Guide](#deployment-guide) for network configuration and deployment steps.
 
