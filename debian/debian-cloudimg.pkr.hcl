@@ -80,7 +80,7 @@ build {
   sources = ["source.qemu.cloudimg"]
 
   provisioner "shell" {
-    environment_vars = concat(local.proxy_env, ["DEBIAN_FRONTEND=noninteractive", "DEBIAN_VERSION=${var.debian_version}", "BOOT_MODE=${var.boot_mode}", "PACKER_HTTP_ADDR=${build.HTTPIP}:${build.HTTPPort}"])
+    environment_vars = concat(local.proxy_env, ["DEBIAN_FRONTEND=noninteractive", "DEBIAN_VERSION=${var.debian_version}", "BOOT_MODE=${var.boot_mode}", "PACKER_HTTP_ADDR=${build.PackerHTTPAddr}"])
     scripts          = ["${path.root}/scripts/essential-packages.sh", "${path.root}/scripts/setup-boot.sh", "${path.root}/scripts/networking.sh"]
   }
 
