@@ -60,19 +60,34 @@ chmod 755 /usr/local/bin/netplan
 
 
 # This is a super dirty trick to make this work. Debian's cloud-init is
-# missing MAAS bindings and this causes the installation to fail the 
-# last phase after a reboot. This can be upgraded back to Debian's 
+# missing MAAS bindings and this causes the installation to fail the
+# last phase after a reboot. This can be upgraded back to Debian's
 # version after the installation has been completed.
 # TODO: Figure a way to upstream the changes.
+
+# Fetch a pinned cloud-init .deb, preferring a local copy served by Packer's
+# built-in HTTP server (drop the file in debian/http/) over the upstream
+# Launchpad URL, since launchpadlibrarian.net is not always reachable from
+# every build host.
+fetch_cloud_init_deb() {
+  local deb_name="$1"
+  local upstream_url="$2"
+
+  if [ -n "${PACKER_HTTP_ADDR}" ] && wget -q "http://${PACKER_HTTP_ADDR}/${deb_name}" -O "${deb_name}"; then
+    echo "Fetched ${deb_name} from local Packer HTTP server"
+  else
+    wget "${upstream_url}"
+  fi
+}
 
 # Bookworm LP#2011454
 if [ ${DEBIAN_VERSION} == '12' ] || [ ${DEBIAN_VERSION} == '13' ]; then
      apt-get -y install python3-netifaces isc-dhcp-client python3-six
-     wget https://launchpad.net/~ubuntu-security/+archive/ubuntu/ubuntu-security-collab/+build/26002103/+files/cloud-init_23.1.2-0ubuntu0~23.04.1_all.deb
+     fetch_cloud_init_deb "cloud-init_23.1.2-0ubuntu0~23.04.1_all.deb" "https://launchpad.net/~ubuntu-security/+archive/ubuntu/ubuntu-security-collab/+build/26002103/+files/cloud-init_23.1.2-0ubuntu0~23.04.1_all.deb"
      dpkg -i cloud-init_23.1.2-0ubuntu0~23.04.1_all.deb
      rm cloud-init_23.1.2-0ubuntu0~23.04.1_all.deb
 else
-    wget https://launchpad.net/ubuntu/+source/cloud-init/20.1-10-g71af48df-0ubuntu5/+build/19168684/+files/cloud-init_20.1-10-g71af48df-0ubuntu5_all.deb
+    fetch_cloud_init_deb "cloud-init_20.1-10-g71af48df-0ubuntu5_all.deb" "https://launchpad.net/ubuntu/+source/cloud-init/20.1-10-g71af48df-0ubuntu5/+build/19168684/+files/cloud-init_20.1-10-g71af48df-0ubuntu5_all.deb"
     dpkg -i cloud-init_20.1-10-g71af48df-0ubuntu5_all.deb
     rm cloud-init_20.1-10-g71af48df-0ubuntu5_all.deb
 fi
