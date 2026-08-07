@@ -73,10 +73,12 @@ fetch_cloud_init_deb() {
   local deb_name="$1"
   local upstream_url="$2"
 
+  rm -f "${deb_name}"
   if [ -n "${PACKER_HTTP_ADDR}" ] && wget -q "http://${PACKER_HTTP_ADDR}/${deb_name}" -O "${deb_name}"; then
     echo "Fetched ${deb_name} from local Packer HTTP server"
   else
-    wget "${upstream_url}"
+    rm -f "${deb_name}"
+    wget -O "${deb_name}" "${upstream_url}"
   fi
 }
 
